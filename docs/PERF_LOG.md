@@ -181,3 +181,8 @@
 | pipeline + fastpost + static compile + cudnn.benchmark b1 / **b2** | 17.8 / **17.5 s** | 202.5 / **205.9** | 18.6 / 18.7 s | 7.8 | 0.81902 |
 -> final = 1.46x FastSegmentator, 7.8x official CLI on T4. Compile warm-up 45 s, model load 5 s (excluded).
    Dice paired vs official: mean -1e-5, abs max 0.024. (kaggle/out_3way, kaggle/eval_t4_3way.json)
+
+## 15. FastSegmentator with its own nnUNet_compile=1 (fair baseline, 2026-11-18)
+- GH200 TS-73 (from §6 runs): 1182 CT/h (3.05 s/CT), Dice 0.93765 -> FlashSegmentator b8 = 3.20x.
+- T4 BTCV-12 (Kaggle fastseg-t4-fscompile): 163.6 CT/h (22.0 s/CT), latency median 21.7 s, first case incl. compile 66.7 s, peak 7.3 GB,
+  BTCV Dice 0.81902 -> FlashSegmentator b2 (205.9) = 1.26x.

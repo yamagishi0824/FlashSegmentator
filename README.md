@@ -33,9 +33,10 @@ Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
 |---|---|---|---|---|
 | TotalSegmentator (official CLI, one call per CT) | 135.9 s | 26.5 CT/h | 1.0× | 0.81903 |
 | FastSegmentator (upstream) | 25.6 s | 141 CT/h | 5.3× | 0.81902 |
+| FastSegmentator + its `nnUNet_compile=1` | 22.0 s | 164 CT/h | 6.2× | 0.81902 |
 | **FlashSegmentator** (batch 2) | **17.5 s** | **206 CT/h** | **7.8×** | **0.81902** |
 
-On a slow GPU the network itself dominates, so the gain over FastSegmentator is smaller (1.46×) and larger batches
+On a slow GPU the network itself dominates, so the gain over FastSegmentator is smaller (1.46×; 1.26× over FastSegmentator with `nnUNet_compile=1`) and larger batches
 do not help (use `--batch 2`).
 Timings exclude model load (~3.5 s) and the one-off `torch.compile` warm-up (~15–30 s), which are reported separately
 in the log. Note that the official-CLI number also includes per-call start-up and model loading, so it measures
