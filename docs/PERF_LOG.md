@@ -197,3 +197,10 @@
 | BTCV-12 (T4) | FlashSegmentator b2 vs official TS | 12 | -1.0e-5 [-6.6e-4, +6.4e-4] | 13/13 | 0.0062 | – |
 All case-level TOST p < 1e-11. Every label is equivalent even at delta = 0.0025 on TS-73 (widest bound 0.0021).
 Files: results_gh200/equiv_ts73.json, equiv_btcv30.json, kaggle/equiv_t4.json.
+
+## 17a. Layout transposes / cudnn.benchmark / BTCV-30 at b8 (GH200, 2026-11-18)
+- probe_layout (ms/patch/model, B4 / B8): compile 5.83 / 5.58; + channels_last 5.83 / 5.62; + inductor force_layout_optimization 5.81 / 5.58; both 5.83 / 5.61.
+  cudnn nchw<->nhwc transposes stay at ~33% of forward (B8: 73.5 of 223 ms) in every compiled variant; only eager+channels_last removes them,
+  but eager is 2.7x slower overall. -> not removable with stock PyTorch/cuDNN; not adopted (would need an NDHWC-native conv path).
+- cudnn.benchmark in the final pipeline: TS-73 b8 3769 CT/h (vs 3782 without) -> speed unchanged; kept for shorter warm-up on fresh shapes.
+- BTCV-30 FlashSegmentator b8 + cudnn.benchmark: 3333 CT/h (b2 was 3124; FastSegmentator 975 -> 3.42x), latency median 1.63 s, warm-up 15 s.

@@ -25,7 +25,7 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 | **FlashSegmentator** (batch 8) | **0.95 s** | **3782 CT/h** | **57.7×** | **0.93766** |
 
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
-3124 CT/h (batch 2), single-CT latency 3.57 s → 1.61 s, BTCV Dice 0.84463 for both.
+3333 CT/h (batch 8; 3.42×), single-CT latency 3.57 s → 1.63 s, BTCV Dice 0.84463 for both.
 
 Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
 
@@ -66,7 +66,8 @@ noise (~100–250 voxels per CT, the same size as run-to-run nondeterminism of t
 
 Tried and **not** adopted (details in the log): TensorRT FP16/FP32 (slower than `torch.compile` on GH200;
 InstanceNorm becomes slow reductions), ONNX Runtime, fusing the 5 networks into one grouped-conv network
-(faster in eager, slower once compiled), `channels_last_3d`, larger batches on small GPUs.
+(faster in eager, slower once compiled), `channels_last_3d` / Inductor layout optimisation (cuDNN's NCHW↔NHWC
+transposes, ~1/3 of the forward, remain either way), larger batches on small GPUs.
 
 ## Repository layout
 
