@@ -7,7 +7,8 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 
 - Same pretrained TotalSegmentator weights, same network, same sliding-window settings
   (patch 128³, step 0.8, Gaussian weighting, no mirroring, fp16 autocast) — **no retraining**.
-- Same accuracy: Dice vs ground truth is identical to official TotalSegmentator to 5 decimals.
+- Same accuracy: Dice vs ground truth matches official TotalSegmentator to within ±0.00002 (fp16 summation-order noise;
+  all Dice values in this README are given to 5 decimals).
 - Faster when processing many CTs: on GH200, **~3.4× FastSegmentator** and **~58× the official TotalSegmentator CLI**.
 
 > Status: research code, work in progress. Only `-ta total` (CT) is covered. The original FastSegmentator README
@@ -22,15 +23,15 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 | **FlashSegmentator** (batch 8) | **0.95 s** | **3782 CT/h** | **0.93766** |
 
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
-3124 CT/h (batch 2), single-CT latency 3.57 s → 1.61 s, BTCV Dice 0.8446 for both.
+3124 CT/h (batch 2), single-CT latency 3.57 s → 1.61 s, BTCV Dice 0.84463 for both.
 
 Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
 
 | | per CT (mean, batch run) | throughput | BTCV Dice |
 |---|---|---|---|
-| TotalSegmentator (official CLI, one call per CT) | 135.9 s | 26.5 CT/h | 0.8190 |
-| FastSegmentator (upstream) | 25.6 s | 141 CT/h | 0.8190 |
-| **FlashSegmentator** (batch 2) | **17.5 s** | **206 CT/h** | **0.8190** |
+| TotalSegmentator (official CLI, one call per CT) | 135.9 s | 26.5 CT/h | 0.81903 |
+| FastSegmentator (upstream) | 25.6 s | 141 CT/h | 0.81902 |
+| **FlashSegmentator** (batch 2) | **17.5 s** | **206 CT/h** | **0.81902** |
 
 On a slow GPU the network itself dominates, so the gain over FastSegmentator is smaller (1.46×) and larger batches
 do not help (use `--batch 2`).
