@@ -204,3 +204,10 @@ Files: results_gh200/equiv_ts73.json, equiv_btcv30.json, kaggle/equiv_t4.json.
   but eager is 2.7x slower overall. -> not removable with stock PyTorch/cuDNN; not adopted (would need an NDHWC-native conv path).
 - cudnn.benchmark in the final pipeline: TS-73 b8 3769 CT/h (vs 3782 without) -> speed unchanged; kept for shorter warm-up on fresh shapes.
 - BTCV-30 FlashSegmentator b8 + cudnn.benchmark: 3333 CT/h (b2 was 3124; FastSegmentator 975 -> 3.42x), latency median 1.63 s, warm-up 15 s.
+
+## 18. Official TotalSegmentator with concurrent CLI processes (user-level `xargs -P`, not an official feature; 2026-11-18)
+- GH200, first 24 TS-test CTs: NP=1 65.5 (73 CTs) / NP=2 124.0 / NP=4 224.2 / NP=8 397.0 CT/h; GPU util mean 12/15/33 %, peak GPU mem 10.4/13.8/24.2 GB; no failures.
+  NP=16/32 (48 CTs) pending. FlashSegmentator b8 (3782) = 9.5x NP=8.
+- T4 (Kaggle, 4 vCPU, 31 GB RAM, single GPU), BTCV-12: NP=1 26.5 / NP=2 39.0 / NP=4 42.0 and 44.3 (two runs) CT/h; GPU util ~19–23 %, peak GPU mem 7.6 / 11.5–14.4 GB of 16; no failures.
+  CPU-bound on small machines. FlashSegmentator b2 (206) = 4.7–4.9x NP=4.
+- GPU energy per CT on GH200 (power.draw only, idle 67 W; throughput window): official NP=1 2.02 Wh, FastSegmentator 0.28 Wh, FlashSegmentator b8 0.16 Wh (602 W mean).
