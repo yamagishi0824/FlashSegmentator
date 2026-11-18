@@ -17,23 +17,23 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 
 ## Results (TotalSegmentator v2.0.1 test split, 73 CTs, NVIDIA GH200)
 
-| | per CT (mean, batch run) | throughput | Dice vs GT (case mean) |
-|---|---|---|---|
-| TotalSegmentator (official CLI, one call per CT) | 55.0 s | 65.5 CT/h | 0.93765 |
-| FastSegmentator (`totalseg_infer.py`, upstream) | 3.26 s | 1104 CT/h | 0.93765 |
-| FastSegmentator + its `nnUNet_compile=1` | 3.05 s | 1182 CT/h | 0.93765 |
-| **FlashSegmentator** (batch 8) | **0.95 s** | **3782 CT/h** | **0.93766** |
+| | per CT (mean, batch run) | throughput | speed vs TotalSegmentator | Dice vs GT (case mean) |
+|---|---|---|---|---|
+| TotalSegmentator (official CLI, one call per CT) | 55.0 s | 65.5 CT/h | 1.0× | 0.93765 |
+| FastSegmentator (`totalseg_infer.py`, upstream) | 3.26 s | 1104 CT/h | 16.9× | 0.93765 |
+| FastSegmentator + its `nnUNet_compile=1` | 3.05 s | 1182 CT/h | 18.0× | 0.93765 |
+| **FlashSegmentator** (batch 8) | **0.95 s** | **3782 CT/h** | **57.7×** | **0.93766** |
 
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
 3124 CT/h (batch 2), single-CT latency 3.57 s → 1.61 s, BTCV Dice 0.84463 for both.
 
 Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
 
-| | per CT (mean, batch run) | throughput | BTCV Dice |
-|---|---|---|---|
-| TotalSegmentator (official CLI, one call per CT) | 135.9 s | 26.5 CT/h | 0.81903 |
-| FastSegmentator (upstream) | 25.6 s | 141 CT/h | 0.81902 |
-| **FlashSegmentator** (batch 2) | **17.5 s** | **206 CT/h** | **0.81902** |
+| | per CT (mean, batch run) | throughput | speed vs TotalSegmentator | BTCV Dice |
+|---|---|---|---|---|
+| TotalSegmentator (official CLI, one call per CT) | 135.9 s | 26.5 CT/h | 1.0× | 0.81903 |
+| FastSegmentator (upstream) | 25.6 s | 141 CT/h | 5.3× | 0.81902 |
+| **FlashSegmentator** (batch 2) | **17.5 s** | **206 CT/h** | **7.8×** | **0.81902** |
 
 On a slow GPU the network itself dominates, so the gain over FastSegmentator is smaller (1.46×) and larger batches
 do not help (use `--batch 2`).
