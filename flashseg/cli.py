@@ -1,9 +1,9 @@
 """FlashSegmentator CLI: TotalSegmentator `total` (5 part-models) over a folder of CTs, with the model loaded once,
 pipelined prep/GPU/write, GPU logits->label, and static-shape torch.compile. See README / docs/PERF_LOG.md.
 
-python flashseg/cli.py -i <ct_dir_or_file> -o <out_dir> [--batch 8] [--group 4] [--no_compile] [--weights DIR] [--log DIR | --no_log]
+python flashseg/cli.py -i <ct_dir_or_file> -o <out_dir> [--batch 8] [--group 4] [--no_compile] [--weights DIR] [--log [DIR]]
 
-A run log is written to <out_dir>/flashseg_log/ by default: summary.json (throughput excl. warm-up, model load,
+With --log, a run log is written to <out_dir>/flashseg_log/ (or DIR): summary.json (throughput excl. warm-up, model load,
 first-case/compile time, peak GPU memory, GPU, versions, settings) and per_case.csv (completion time of every CT).
 """
 import argparse
@@ -34,8 +34,8 @@ def main():
     ap.add_argument("--batch", type=int, default=8, help="patches per forward (GH200: 8, smaller GPUs: 2)")
     ap.add_argument("--group", type=int, default=4, help="cases pooled per pipeline stage")
     ap.add_argument("--no_compile", action="store_true", help="skip static torch.compile (e.g. T4 / quick runs)")
-    ap.add_argument("--log", default=None, help="log directory (default <out_dir>/flashseg_log)")
-    ap.add_argument("--no_log", action="store_true", help="do not write the run log")
+    ap.add_argument("--log", nargs="?", const="", default=None, metavar="DIR",
+                    help="write a run log (default dir <out_dir>/flashseg_log)")
     a = ap.parse_args()
     files = [a.input] if os.path.isfile(a.input) else sorted(glob.glob(os.path.join(a.input, "*.nii.gz")))
     if not files:
@@ -73,7 +73,7 @@ def main():
     if thr:
         msg += f"; throughput {thr:.0f} CT/h ({rest_s / len(rest):.2f} s/CT) over the remaining {len(rest)}"
     print(msg, flush=True)
-    if a.no_log:
+    if a.log is None:
         return
     log = Path(a.log) if a.log else out / "flashseg_log"
     log.mkdir(parents=True, exist_ok=True)

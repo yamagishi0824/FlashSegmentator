@@ -91,12 +91,11 @@ python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 2     # sma
 python flashseg/cli.py -i ct.nii.gz -o out --no_compile                    # skip torch.compile warm-up
 ```
 
-Run log (on by default):
+Run log (only when `--log` is given):
 
 ```bash
-python flashseg/cli.py -i cts/ -o out/                       # log -> out/flashseg_log/{summary.json,per_case.csv}
+python flashseg/cli.py -i cts/ -o out/ --log                 # log -> out/flashseg_log/{summary.json,per_case.csv}
 python flashseg/cli.py -i cts/ -o out/ --log runs/gh200_b8   # log to another directory
-python flashseg/cli.py -i cts/ -o out/ --no_log              # no log
 ```
 
 Example `summary.json`:
@@ -121,7 +120,7 @@ Example `summary.json`:
 CTs of one group finish together, so intervals are bursty).
 
 One multilabel `.nii.gz` per input CT is written (TotalSegmentator `total` label map).
-A run log is written to `<out>/flashseg_log/` (disable with `--no_log`, relocate with `--log DIR`):
+With `--log`, a run log is written to `<out>/flashseg_log/` (or `--log DIR`):
 `summary.json` (throughput excluding the first CT, model-load time, first-CT time incl. `torch.compile` warm-up,
 peak GPU memory, GPU / torch / CUDA versions, settings, commit) and `per_case.csv` (completion time of each CT).
 Throughput is meaningful for folders of more than a few CTs (the pipeline needs a few groups to fill).
