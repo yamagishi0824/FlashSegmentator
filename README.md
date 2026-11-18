@@ -91,6 +91,35 @@ python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 2     # sma
 python flashseg/cli.py -i ct.nii.gz -o out --no_compile                    # skip torch.compile warm-up
 ```
 
+Run log (on by default):
+
+```bash
+python flashseg/cli.py -i cts/ -o out/                       # log -> out/flashseg_log/{summary.json,per_case.csv}
+python flashseg/cli.py -i cts/ -o out/ --log runs/gh200_b8   # log to another directory
+python flashseg/cli.py -i cts/ -o out/ --no_log              # no log
+```
+
+Example `summary.json`:
+
+```json
+{
+ "n_cases": 73,
+ "settings": {"batch": 8, "group": 4, "compile": true, "cudnn_benchmark": true, "task": "total"},
+ "model_load_s": 3.6,
+ "first_case_incl_compile_s": 30.9,
+ "throughput_ct_per_hour": 3770,
+ "mean_s_per_ct_excl_first": 0.95,
+ "total_wall_s": 100.4,
+ "peak_gpu_mem_gb": 15.8,
+ "gpu": "NVIDIA GH200 120GB",
+ "torch": "2.11.0+cu128",
+ "flashsegmentator_commit": "09fe6e3"
+}
+```
+
+`per_case.csv` has one row per CT: `case,done_at_s,interval_s` (seconds since the first CT started; in a pipeline,
+CTs of one group finish together, so intervals are bursty).
+
 One multilabel `.nii.gz` per input CT is written (TotalSegmentator `total` label map).
 A run log is written to `<out>/flashseg_log/` (disable with `--no_log`, relocate with `--log DIR`):
 `summary.json` (throughput excluding the first CT, model-load time, first-CT time incl. `torch.compile` warm-up,
