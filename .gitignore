@@ -67,3 +67,7 @@ Thumbs.db
 CLAUDE.md
 scripts/
 .understand-anything/
+trt_engines/
+__pycache__/
+accel/
+cufile.log

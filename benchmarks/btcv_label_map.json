@@ -1,0 +1,32 @@
+{
+ "pred_to_gt": {
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "15": 5,
+  "5": 6,
+  "6": 7,
+  "52": 8,
+  "63": 9,
+  "64": 10,
+  "7": 11,
+  "8": 12,
+  "9": 13
+ },
+ "names": {
+  "1": "spleen",
+  "2": "kidney_right",
+  "3": "kidney_left",
+  "4": "gallbladder",
+  "5": "esophagus",
+  "6": "liver",
+  "7": "stomach",
+  "8": "aorta",
+  "9": "inferior_vena_cava",
+  "10": "portal_vein_and_splenic_vein",
+  "11": "pancreas",
+  "12": "adrenal_gland_right",
+  "13": "adrenal_gland_left"
+ }
+}

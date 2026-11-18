@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "fastsegmentator"))
 sys.path.insert(0, str(REPO / "src"))
 
 torch = pytest.importorskip("torch")
@@ -120,7 +120,7 @@ def test_gpu_postprocess_matches_scipy():
 # Input validation / error handling (CPU, via the CLI)
 # ---------------------------------------------------------------------------
 def _run(args):
-    return subprocess.run([sys.executable, str(REPO / "totalseg_infer.py"), *args],
+    return subprocess.run([sys.executable, str(REPO / "fastsegmentator" / "totalseg_infer.py"), *args],
                           capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(REPO))
 
 

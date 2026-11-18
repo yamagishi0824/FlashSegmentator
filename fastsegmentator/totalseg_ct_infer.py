@@ -27,7 +27,7 @@ import SimpleITK as sitk
 import torch
 from tqdm import tqdm
 
-_TOTALSEG_SRC = Path(__file__).parent.parent / "TotalSegmentator"
+_TOTALSEG_SRC = Path(__file__).resolve().parent.parent.parent / "TotalSegmentator"
 if _TOTALSEG_SRC.exists():
     sys.path.insert(0, str(_TOTALSEG_SRC))
 

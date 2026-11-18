@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 # Make sure TotalSegmentator package is importable
-TOTALSEG_SRC = Path(__file__).parent.parent / "TotalSegmentator"
+TOTALSEG_SRC = Path(__file__).resolve().parent.parent.parent / "TotalSegmentator"
 if TOTALSEG_SRC.exists():
     sys.path.insert(0, str(TOTALSEG_SRC))
 
