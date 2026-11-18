@@ -186,3 +186,14 @@
 - GH200 TS-73 (from §6 runs): 1182 CT/h (3.05 s/CT), Dice 0.93765 -> FlashSegmentator b8 = 3.20x.
 - T4 BTCV-12 (Kaggle fastseg-t4-fscompile): 163.6 CT/h (22.0 s/CT), latency median 21.7 s, first case incl. compile 66.7 s, peak 7.3 GB,
   BTCV Dice 0.81902 -> FlashSegmentator b2 (205.9) = 1.26x.
+
+## 16. Equivalence tests (TOST, paired Dice, delta = 0.01, 90% CI; benchmarks/equivalence.py, 2026-11-18)
+| dataset (GPU) | method vs reference | cases | case-mean diff [90% CI] | labels equivalent | widest label CI bound | (case,label) pairs: abs max / p99 |
+|---|---|---|---|---|---|---|
+| TS-73 (GH200) | FastSegmentator vs official TS | 73 | +1.3e-6 [-1.7e-6, +4.4e-6] | 117/117 | 0.0006 | 0.0058 / 0.0003 |
+| TS-73 (GH200) | FlashSegmentator b8 vs official TS | 73 | +9.7e-6 [-2.8e-6, +2.2e-5] | 117/117 | 0.0021 (label 93) | 0.026 / 0.0004 |
+| BTCV-30 (GH200) | FlashSegmentator b2 vs FastSegmentator | 30 | +5.4e-6 [-1.4e-6, +1.2e-5] | 13/13 | 0.0001 | – |
+| BTCV-12 (T4) | FastSegmentator vs official TS | 12 | -8.8e-6 [-6.5e-4, +6.4e-4] | 13/13 | 0.0062 | – |
+| BTCV-12 (T4) | FlashSegmentator b2 vs official TS | 12 | -1.0e-5 [-6.6e-4, +6.4e-4] | 13/13 | 0.0062 | – |
+All case-level TOST p < 1e-11. Every label is equivalent even at delta = 0.0025 on TS-73 (widest bound 0.0021).
+Files: results_gh200/equiv_ts73.json, equiv_btcv30.json, kaggle/equiv_t4.json.
