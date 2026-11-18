@@ -92,6 +92,10 @@ python flashseg/cli.py -i ct.nii.gz -o out --no_compile                    # ski
 ```
 
 One multilabel `.nii.gz` per input CT is written (TotalSegmentator `total` label map).
+A run log is written to `<out>/flashseg_log/` (disable with `--no_log`, relocate with `--log DIR`):
+`summary.json` (throughput excluding the first CT, model-load time, first-CT time incl. `torch.compile` warm-up,
+peak GPU memory, GPU / torch / CUDA versions, settings, commit) and `per_case.csv` (completion time of each CT).
+Throughput is meaningful for folders of more than a few CTs (the pipeline needs a few groups to fill).
 Benchmark / evaluation scripts: `benchmarks/bench2.py` (throughput, latency, memory), `benchmarks/eval_gt.py` (Dice vs GT).
 
 ## Acknowledgements and license
