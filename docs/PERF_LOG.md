@@ -171,3 +171,13 @@
 - Accuracy b8 (GH200 TS-73, eval_gt_sc_b8.json): Dice case-mean 0.937659 vs official TS 0.937649; paired mean diff 1e-6, abs max 0.026 (fp16 order).
 - dev GPU TS-8 with cache-limit fix + cudnn.benchmark (bench2_sc_b248_dev): b2 494 / b4 483 / b8 479 CT/h (warm-up 11/26/31 s, peak 9.7/10.8/14.3 GB)
   -> on dev GPU batch size does not matter (compute-bound); b2 stays best there.
+
+## 14. T4 three-way (Kaggle, BTCV 12, 2026-11-18)
+| | per CT | CT/h | latency median | peak GB | BTCV Dice |
+|---|---|---|---|---|---|
+| official TotalSegmentator CLI (8806051) | 135.9 s | 26.5 | – | – | 0.81903 |
+| FastSegmentator original | 25.6 s | 140.9 | 25.6 s | 7.4 | 0.81902 |
+| pipeline + fastpost b1 / b2 (no compile) | 21.7 / 21.2 s | 165.7 / 169.5 | – | 7.8 | – |
+| pipeline + fastpost + static compile + cudnn.benchmark b1 / **b2** | 17.8 / **17.5 s** | 202.5 / **205.9** | 18.6 / 18.7 s | 7.8 | 0.81902 |
+-> final = 1.46x FastSegmentator, 7.8x official CLI on T4. Compile warm-up 45 s, model load 5 s (excluded).
+   Dice paired vs official: mean -1e-5, abs max 0.024. (kaggle/out_3way, kaggle/eval_t4_3way.json)

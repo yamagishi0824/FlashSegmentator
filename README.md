@@ -24,7 +24,16 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
 3124 CT/h (batch 2), single-CT latency 3.57 s → 1.61 s, BTCV Dice 0.8446 for both.
 
-On smaller GPUs the gain is smaller and larger batches do not help (use `--batch 2`).
+Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
+
+| | per CT (mean, batch run) | throughput | BTCV Dice |
+|---|---|---|---|
+| TotalSegmentator (official CLI, one call per CT) | 135.9 s | 26.5 CT/h | 0.8190 |
+| FastSegmentator (upstream) | 25.6 s | 141 CT/h | 0.8190 |
+| **FlashSegmentator** (batch 2) | **17.5 s** | **206 CT/h** | **0.8190** |
+
+On a slow GPU the network itself dominates, so the gain over FastSegmentator is smaller (1.46×) and larger batches
+do not help (use `--batch 2`).
 Timings exclude model load (~3.5 s) and the one-off `torch.compile` warm-up (~15–30 s), which are reported separately
 in the log. Note that the official-CLI number also includes per-call start-up and model loading, so it measures
 "TotalSegmentator as normally used", not raw network speed.
