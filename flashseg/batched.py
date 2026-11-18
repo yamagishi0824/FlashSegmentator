@@ -25,6 +25,29 @@ sys.path.insert(0, str(ROOT))
 import totalseg_infer as ti  # noqa: E402
 from nnunet_infer_nii import (  # noqa: E402
     convert_predicted_logits_to_segmentation_with_correct_shape, _undo_canonical)
+
+# Optional body crop (off by default; output no longer bit-near the original, see PERF_LOG §20).
+# After resampling, the image is cropped to the bounding box of the body (HU > BODY_HU, couch removed
+# by opening, components >= 1% of the largest kept so separated arms stay) + BODY_MARGIN voxels;
+# everything outside the box is written as background.
+BODY_CROP = False
+BODY_HU, BODY_MARGIN = -500.0, 10
+
+
+def _body_bbox(img_zyx):
+    """Bounding box (lo, hi) in voxels of the body on the resampled image (Z, Y, X); None = no crop."""
+    from scipy.ndimage import binary_opening, label
+    m = img_zyx[::2, ::2, ::2] > BODY_HU                        # half resolution is enough for a box
+    m = binary_opening(m, iterations=2)                          # drops couch / thin straps
+    lab, n = label(m)
+    if n == 0:
+        return None
+    sizes = np.bincount(lab.ravel())[1:]
+    keep = np.isin(lab, np.nonzero(sizes >= 0.01 * sizes.max())[0] + 1)
+    idx = np.argwhere(keep)
+    lo = np.maximum(idx.min(0) * 2 - BODY_MARGIN, 0)
+    hi = np.minimum(idx.max(0) * 2 + 2 + BODY_MARGIN, img_zyx.shape)
+    return lo, hi
 from acvl_utils.cropping_and_padding.padding import pad_nd_image  # noqa: E402
 from nnunetv2.inference.sliding_window_prediction import compute_gaussian  # noqa: E402
 
@@ -43,13 +66,24 @@ def prepare_case(file_path, cfg):
         arr_xyz = img_can.get_fdata().astype(np.float32)
         z = img_can.header.get_zooms()[:3]
         spacing_zyx = [float(z[2]), float(z[1]), float(z[0])]
+    image = arr_xyz.transpose(2, 1, 0)[np.newaxis]
+    bbox = _body_bbox(image[0]) if BODY_CROP else None
+    if bbox is not None:
+        full_shape = image.shape[1:]
+        image = np.ascontiguousarray(image[(slice(None), *[slice(a, b) for a, b in zip(*bbox)])])
+        bbox = (bbox[0], bbox[1], full_shape)
     return dict(file=file_path, img_orig=img_orig, img_can=img_can, img_can_shape=img_can.shape,
-                img_rsp=img_rsp, image=arr_xyz.transpose(2, 1, 0)[np.newaxis],
+                img_rsp=img_rsp, image=image, bbox=bbox,
                 props={'spacing': spacing_zyx}, seg=None)
 
 
 def finish_case(c, cfg, task_name):
     """= second half of ti._predict_to_original_space (postprocess at resample res, undo)."""
+    if c.get('bbox') is not None:                              # body crop: paste back into full grid
+        lo, hi, full = c['bbox']
+        seg = np.zeros(full, dtype=np.uint8)
+        seg[tuple(slice(a, b) for a, b in zip(lo, hi))] = c['seg']
+        c['seg'] = seg
     seg_nib = nib.Nifti1Image(c['seg'].transpose(2, 1, 0).astype(np.uint8), c['img_rsp'].affine)
     seg_nib = ti.remove_auxiliary_labels(seg_nib, task_name)
     if cfg.resample is not None:
@@ -129,14 +163,22 @@ def predict_group(predictor, cases, use_softmax, batch_size, state=None, fast_po
         segs = []
         for c, w in zip(cases, work):
             lg = w['logits']; lg /= w['npred']
-            if torch.any(torch.isinf(lg)):
+            del w['npred']
+            # per-channel check: a full-volume isinf() mask needed GB of extra memory and OOMed on large
+            # CTs (T4 / several processes per GPU), outside the forward pass's OOM guard
+            if any(bool(torch.isinf(lg[k]).any()) for k in range(lg.shape[0])):
                 raise RuntimeError("inf in predicted logits")
             lg = lg[(slice(None), *w['revert'][1:])]
-            del w['data'], w['npred']
+            del w['data']
             if fast_post:   # PERF_LOG 5a: fp16 max/threshold + crop revert on GPU, stays on GPU
                 import fastpost
-                seg = fastpost.logits_to_seg_gpu(lg, predictor.plans_manager, predictor.configuration_manager,
-                                                 predictor.label_manager, c['props'], use_softmax)
+                try:
+                    seg = fastpost.logits_to_seg_gpu(lg, predictor.plans_manager, predictor.configuration_manager,
+                                                     predictor.label_manager, c['props'], use_softmax)
+                except torch.OutOfMemoryError:   # free cached blocks once and retry (large CTs, shared GPU)
+                    torch.cuda.empty_cache(); state['oom_events'] += 1
+                    seg = fastpost.logits_to_seg_gpu(lg, predictor.plans_manager, predictor.configuration_manager,
+                                                     predictor.label_manager, c['props'], use_softmax)
             else:
                 seg = convert_predicted_logits_to_segmentation_with_correct_shape(
                     lg, predictor.plans_manager, predictor.configuration_manager, predictor.label_manager,

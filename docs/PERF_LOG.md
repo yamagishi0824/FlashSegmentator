@@ -211,3 +211,17 @@ Files: results_gh200/equiv_ts73.json, equiv_btcv30.json, kaggle/equiv_t4.json.
 - T4 (Kaggle, 4 vCPU, 31 GB RAM, single GPU), BTCV-12: NP=1 26.5 / NP=2 39.0 / NP=4 42.0 and 44.3 (two runs) CT/h; GPU util ~19–23 %, peak GPU mem 7.6 / 11.5–14.4 GB of 16; no failures.
   CPU-bound on small machines. FlashSegmentator b2 (206) = 4.7–4.9x NP=4.
 - GPU energy per CT on GH200 (power.draw only, idle 67 W; throughput window): official NP=1 2.02 Wh, FastSegmentator 0.28 Wh, FlashSegmentator b8 0.16 Wh (602 W mean).
+
+## 19. Concurrent processes (GH200, TS test 73) and official parallel NP16/NP32
+
+FlashSegmentator, K processes on one GPU (73 cases split K ways, batch 8, each process `--log`; aggregate = sum of per-process steady-state CT/h):
+
+| K | aggregate CT/h | per-process peak GPU mem (torch) | GPU energy, whole run incl. compile |
+|---|---|---|---|
+| 1 | 3727 | 17.2 GB | 51.0 kJ, 0.194 Wh/CT, mean 409 W |
+| 2 | ~3800 (1979 + 1823) | 15.3–16.2 GB | 51.5 kJ, 0.196 Wh/CT |
+| 4 | ~4080 (927–1081 each) | 14.6–18.2 GB | 52.3 kJ, 0.199 Wh/CT |
+
+Extra processes add ≤ ~9% (GPU already saturated by one process); one process is the recommended configuration.
+
+Official TotalSegmentator CLI via `xargs -P N` (48 cases): NP16 672 CT/h (peak nvidia-smi mem 53.4 GiB), NP32 1025 CT/h (62.4 GiB), no failures. Gain per doubling 1.69× (8→16), 1.53× (16→32). Best official (NP32) vs Flash 1 process: 3.7×.

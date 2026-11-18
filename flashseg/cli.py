@@ -33,10 +33,13 @@ def main():
     ap.add_argument("--weights", default=str(Path.home() / ".totalsegmentator/nnunet/results"))
     ap.add_argument("--batch", type=int, default=8, help="patches per forward (GH200: 8, smaller GPUs: 2)")
     ap.add_argument("--group", type=int, default=4, help="cases pooled per pipeline stage")
+    ap.add_argument("--body_crop", action="store_true",
+                    help="crop to the body bounding box before tiling (~25%% fewer patches; output changes slightly)")
     ap.add_argument("--no_compile", action="store_true", help="skip static torch.compile (e.g. T4 / quick runs)")
     ap.add_argument("--log", nargs="?", const="", default=None, metavar="DIR",
                     help="write a run log (default dir <out_dir>/flashseg_log)")
     a = ap.parse_args()
+    B.BODY_CROP = a.body_crop
     files = [a.input] if os.path.isfile(a.input) else sorted(glob.glob(os.path.join(a.input, "*.nii.gz")))
     if not files:
         sys.exit(f"no .nii.gz found in {a.input}")
@@ -84,7 +87,7 @@ def main():
         commit = None
     summary = dict(
         started=started, n_cases=len(files), input=str(a.input), output=str(out),
-        settings=dict(batch=a.batch, group=a.group, compile=not a.no_compile, cudnn_benchmark=True, task=task),
+        settings=dict(batch=a.batch, group=a.group, compile=not a.no_compile, cudnn_benchmark=True, task=task, body_crop=a.body_crop),
         model_load_s=round(model_load_s, 3), first_case_incl_compile_s=round(first_case_s, 3),
         throughput_ct_per_hour=round(thr, 1) if thr else None,
         mean_s_per_ct_excl_first=round(rest_s / len(rest), 3) if rest else None,
