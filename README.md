@@ -9,7 +9,8 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
   (patch 128³, step 0.8, Gaussian weighting, no mirroring, fp16 autocast) — **no retraining**.
 - Same accuracy: Dice vs ground truth matches official TotalSegmentator to within ±0.00002 (fp16 summation-order noise;
   all Dice values in this README are given to 5 decimals).
-- Faster when processing many CTs: on GH200, **~3.4× FastSegmentator** and **~58× the official TotalSegmentator CLI**.
+- Faster when processing many CTs: on GH200, **~3.4× FastSegmentator** (3.2× FastSegmentator with its `nnUNet_compile=1`)
+  and **~58× the official TotalSegmentator CLI**.
 
 > Status: research code, work in progress. Only `-ta total` (CT) is covered. The original FastSegmentator README
 > (all other tasks/modes, parity tables) is kept in [`docs/fastsegmentator/README_FastSegmentator.md`](docs/fastsegmentator/README_FastSegmentator.md).
@@ -20,6 +21,7 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 |---|---|---|---|
 | TotalSegmentator (official CLI, one call per CT) | 55.0 s | 65.5 CT/h | 0.93765 |
 | FastSegmentator (`totalseg_infer.py`, upstream) | 3.26 s | 1104 CT/h | 0.93765 |
+| FastSegmentator + its `nnUNet_compile=1` | 3.05 s | 1182 CT/h | 0.93765 |
 | **FlashSegmentator** (batch 8) | **0.95 s** | **3782 CT/h** | **0.93766** |
 
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
