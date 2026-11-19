@@ -1,6 +1,7 @@
 # FlashSegmentator
 
-Throughput-oriented inference for the **TotalSegmentator `total` task** (CT, 117 structures, 5 part-models),
+Throughput-oriented inference for the **TotalSegmentator `total` task** (CT, 117 structures, 5 part-models)
+and the **`total_mr` task** (MRI, 50 structures, 2 part-models; `--mri`),
 built on top of **[FastSegmentator](https://github.com/bowang-lab/FastSegmentator)** (bowang-lab), which is itself a
 fast re-implementation of the inference path of **[TotalSegmentator](https://github.com/wasserth/TotalSegmentator)**
 (Wasserthal et al.) / **[nnU-Net](https://github.com/MIC-DKFZ/nnUNet)** (Isensee et al.).
@@ -12,7 +13,7 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 - Faster when processing many CTs: on GH200, **~3.4× FastSegmentator** (3.2× FastSegmentator with its `nnUNet_compile=1`)
   and **~58× the official TotalSegmentator CLI**.
 
-> Status: research code, work in progress. Only `-ta total` (CT) is covered. The original FastSegmentator README
+> Status: research code, work in progress. Only `total` (CT) and `total_mr` (MRI, `--mri`) are covered. The original FastSegmentator README
 > (all other tasks/modes, parity tables) is kept in [`docs/fastsegmentator/README_FastSegmentator.md`](docs/fastsegmentator/README_FastSegmentator.md).
 
 ## Results (TotalSegmentator v2.0.1 test split, 73 CTs, NVIDIA GH200)
@@ -41,6 +42,20 @@ do not help (use `--batch 2`).
 Timings exclude model load (~3.5 s) and the one-off `torch.compile` warm-up (~15–30 s), which are reported separately
 in the log. Note that the official-CLI number also includes per-call start-up and model loading, so it measures
 "TotalSegmentator as normally used", not raw network speed.
+
+## MRI (`--mri`, TotalSegmentator MRI v2.0.0 test split, 55 MRIs, NVIDIA A100 80GB PCIe)
+
+| | per MRI (mean, batch run) | throughput | speed vs TotalSegmentator | Dice vs GT (case mean, 49 MRIs) |
+|---|---|---|---|---|
+| TotalSegmentator (official CLI `--task total_mr`, one call per MRI) | 25.8 s | 140 /h | 1.0× | 0.78157 |
+| **FlashSegmentator `--mri`** (batch 4) | **0.27 s** | **13,139 /h** | **94×** | **0.78158** |
+
+Paired equivalence vs the official CLI (TOST, ±0.01 Dice): all 50 structures equivalent (widest 90% CI bound 0.0010).
+6 of the 55 test MRIs have empty reference masks in the dataset; they are timed but not included in Dice.
+For MRI, Flash resamples exactly as the official TotalSegmentator does (scipy `ndimage.zoom` grid, linear input
+interpolation; computed on the GPU with `cupyx.scipy.ndimage.zoom`) and uses tile step 0.8 like the official CLI.
+FastSegmentator's MRI path differed in both (cucim resize grid, cubic interpolation, step 0.5), which gave
+structure-level Dice differences up to ~0.2 vs the official CLI. The CT path is unchanged.
 
 Every experiment, including the ones that did **not** help, is recorded with numbers in
 [`docs/PERF_LOG.md`](docs/PERF_LOG.md).
