@@ -89,7 +89,15 @@ checkout as a sibling, weights via `fastsegmentator/download_totalseg_weights.py
 python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 8     # large GPU (H100/GH200)
 python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 2     # smaller GPU
 python flashseg/cli.py -i ct.nii.gz -o out --no_compile                    # skip torch.compile warm-up
+python flashseg/cli.py -i /path/to/mri_folder -o /path/to/out --mri        # MRI: TotalSegmentator `total_mr` (50 structures)
+python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --body_crop   # optional, CT only (see below)
 ```
+
+- `--mri` runs the TotalSegmentator `total_mr` task (part-models 850 and 851, 1.5 mm) with the same batched pipeline.
+  Download its weights first (e.g. `totalseg_download_weights -t total_mr`, or the same layout under `--weights`).
+- `--body_crop` crops each resampled CT to the bounding box of the body (HU > −500) before tiling (~25% fewer patches,
+  ~1.3x faster). **It changes the output slightly** (outside-body voxels are written as background), so it is off by
+  default; it uses a CT intensity threshold and cannot be combined with `--mri`.
 
 Run log (only when `--log` is given):
 
@@ -119,7 +127,7 @@ Example `summary.json`:
 `per_case.csv` has one row per CT: `case,done_at_s,interval_s` (seconds since the first CT started; in a pipeline,
 CTs of one group finish together, so intervals are bursty).
 
-One multilabel `.nii.gz` per input CT is written (TotalSegmentator `total` label map).
+One multilabel `.nii.gz` per input is written (TotalSegmentator `total` label map, or `total_mr` with `--mri`).
 With `--log`, a run log is written to `<out>/flashseg_log/` (or `--log DIR`):
 `summary.json` (throughput excluding the first CT, model-load time, first-CT time incl. `torch.compile` warm-up,
 peak GPU memory, GPU / torch / CUDA versions, settings, commit) and `per_case.csv` (completion time of each CT).

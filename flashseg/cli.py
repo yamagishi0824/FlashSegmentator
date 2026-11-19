@@ -1,7 +1,7 @@
-"""FlashSegmentator CLI: TotalSegmentator `total` (5 part-models) over a folder of CTs, with the model loaded once,
+"""FlashSegmentator CLI: TotalSegmentator `total` (CT, 5 part-models) or `total_mr` (MRI, --mri, 2 part-models) over a folder, with the model loaded once,
 pipelined prep/GPU/write, GPU logits->label, and static-shape torch.compile. See README / docs/PERF_LOG.md.
 
-python flashseg/cli.py -i <ct_dir_or_file> -o <out_dir> [--batch 8] [--group 4] [--no_compile] [--weights DIR] [--log [DIR]]
+python flashseg/cli.py -i <dir_or_file> -o <out_dir> [--mri] [--batch 8] [--group 4] [--no_compile] [--weights DIR] [--log [DIR]]
 
 With --log, a run log is written to <out_dir>/flashseg_log/ (or DIR): summary.json (throughput excl. warm-up, model load,
 first-case/compile time, peak GPU memory, GPU, versions, settings) and per_case.csv (completion time of every CT).
@@ -35,22 +35,38 @@ def main():
     ap.add_argument("--group", type=int, default=4, help="cases pooled per pipeline stage")
     ap.add_argument("--body_crop", action="store_true",
                     help="crop to the body bounding box before tiling (~25%% fewer patches; output changes slightly)")
+    ap.add_argument("--mri", action="store_true",
+                    help="MRI input: TotalSegmentator `total_mr` task (50 structures) instead of CT `total`")
     ap.add_argument("--no_compile", action="store_true", help="skip static torch.compile (e.g. T4 / quick runs)")
+    ap.add_argument("--trt", choices=["fp16", "int8"], default=None,
+                    help="EXPERIMENTAL: TensorRT backend instead of torch.compile (int8 needs --calib)")
+    ap.add_argument("--calib", default=None, help="directory of calibration CTs for --trt int8 (NOT the test set)")
     ap.add_argument("--log", nargs="?", const="", default=None, metavar="DIR",
                     help="write a run log (default dir <out_dir>/flashseg_log)")
     a = ap.parse_args()
+    if a.mri and a.body_crop:
+        sys.exit("--body_crop uses a CT intensity threshold (HU) and is not available with --mri")
     B.BODY_CROP = a.body_crop
     files = [a.input] if os.path.isfile(a.input) else sorted(glob.glob(os.path.join(a.input, "*.nii.gz")))
     if not files:
         sys.exit(f"no .nii.gz found in {a.input}")
     out = Path(a.output); out.mkdir(parents=True, exist_ok=True)
     torch.backends.cudnn.benchmark = True
-    cfg, task, dev = ti.TASK_CONFIGS["total"], "total", torch.device("cuda")
+    task = "total_mr" if a.mri else "total"
+    cfg, dev = ti.TASK_CONFIGS[task], torch.device("cuda")
     started = datetime.now().astimezone().isoformat(timespec="seconds")
     T = time.perf_counter
     t = T()
     preds = ti.build_predictors(cfg, Path(a.weights), dev, ti._step_size_for(task, cfg))
-    if not a.no_compile:
+    trt_info = None
+    if a.trt:
+        import trt_int8
+        cfiles = sorted(glob.glob(os.path.join(a.calib, "*.nii.gz"))) if a.calib else None
+        if a.trt == "int8" and not cfiles:
+            sys.exit("--trt int8 needs --calib <dir of calibration CTs>")
+        trt_info = trt_int8.apply(preds, a.trt, a.batch, cfg, task, cfiles,
+                                  calib_tag=Path(a.calib).name if a.calib else "none")
+    elif not a.no_compile:
         static_compile.apply(preds, a.batch)
     model_load_s = T() - t
     print(f"{len(files)} cases, models loaded in {model_load_s:.1f}s", flush=True)
@@ -87,7 +103,7 @@ def main():
         commit = None
     summary = dict(
         started=started, n_cases=len(files), input=str(a.input), output=str(out),
-        settings=dict(batch=a.batch, group=a.group, compile=not a.no_compile, cudnn_benchmark=True, task=task, body_crop=a.body_crop),
+        settings=dict(batch=a.batch, group=a.group, compile=not a.no_compile, cudnn_benchmark=True, task=task, body_crop=a.body_crop, trt=a.trt, calib=a.calib, trt_info=trt_info),
         model_load_s=round(model_load_s, 3), first_case_incl_compile_s=round(first_case_s, 3),
         throughput_ct_per_hour=round(thr, 1) if thr else None,
         mean_s_per_ct_excl_first=round(rest_s / len(rest), 3) if rest else None,
