@@ -32,8 +32,10 @@ from nnunet_infer_nii import (  # noqa: E402
 # everything outside the box is written as background.
 BODY_CROP = False
 BODY_HU, BODY_MARGIN = -500.0, 10
-# Input resampling order. The reference TotalSegmentator (commit 8806051) uses linear (1); FastSegmentator used 3.
-RESAMPLE_ORDER = 1
+# MRI (`total_mr`) only: resample exactly like the reference TotalSegmentator (commit 8806051): scipy grid
+# (change_spacing_ref), linear input interpolation. The CT path (`total`) is unchanged (FastSegmentator behaviour,
+# cucim GPU resampling, cubic input interpolation): the CT code path is identical to earlier versions.
+MR_RESAMPLE_ORDER = 1
 
 
 def _body_bbox(img_zyx):
@@ -89,7 +91,10 @@ def prepare_case(file_path, cfg):
     img_orig = nib.load(file_path)
     img_can = nib.as_closest_canonical(img_orig)
     if cfg.resample is not None:
-        img_rsp = change_spacing_ref(img_can, list(cfg.resample), order=RESAMPLE_ORDER, dtype=np.int32)
+        if cfg.modality == "mr":
+            img_rsp = change_spacing_ref(img_can, list(cfg.resample), order=MR_RESAMPLE_ORDER, dtype=np.int32)
+        else:
+            img_rsp = ti.tseg_change_spacing(img_can, list(cfg.resample), order=3, dtype=np.int32, use_gpu=True)
         arr_xyz = img_rsp.get_fdata().astype(np.float32)
         spacing_zyx = [float(cfg.resample[2]), float(cfg.resample[1]), float(cfg.resample[0])]
     else:
@@ -118,8 +123,12 @@ def finish_case(c, cfg, task_name):
     seg_nib = nib.Nifti1Image(c['seg'].transpose(2, 1, 0).astype(np.uint8), c['img_rsp'].affine)
     seg_nib = ti.remove_auxiliary_labels(seg_nib, task_name)
     if cfg.resample is not None:
-        seg_nib = change_spacing_ref(seg_nib, list(cfg.resample), c['img_can_shape'], order=0,
-                                     force_affine=c['img_can'].affine)
+        if cfg.modality == "mr":
+            seg_nib = change_spacing_ref(seg_nib, list(cfg.resample), c['img_can_shape'], order=0,
+                                         force_affine=c['img_can'].affine)
+        else:
+            seg_nib = ti.tseg_change_spacing(seg_nib, list(cfg.resample), c['img_can_shape'], order=0,
+                                             force_affine=c['img_can'].affine, use_gpu=True)
     return ti.tseg_undo_canonical(seg_nib, c['img_orig'])
 
 
