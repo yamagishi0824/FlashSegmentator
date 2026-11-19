@@ -24,9 +24,12 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 | FastSegmentator (`totalseg_infer.py`, upstream) | 3.26 s | 1104 CT/h | 16.9× | 0.93765 |
 | FastSegmentator + its `nnUNet_compile=1` | 3.05 s | 1182 CT/h | 18.0× | 0.93765 |
 | **FlashSegmentator** (batch 8) | **0.95 s** | **3782 CT/h** | **57.7×** | **0.93766** |
+| FlashSegmentator (batch 8) `--body_crop` | 0.77 s | 4695 CT/h | 71.7× | 0.93880¹ |
+
+¹ Non-inferior to TotalSegmentator overall (+0.0012, 90% CI 0.0002–0.0021; margin −0.01) and for 106/117 structures; exceptions include some ribs, C5–C6 and kidney cysts. Use the default (no crop) for whole-body quantification of thin structures.
 
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
-3333 CT/h (batch 8; 3.42×), single-CT latency 3.57 s → 1.63 s, BTCV Dice 0.84463 for both.
+3333 CT/h (batch 8; 3.42×), single-CT latency 3.57 s → 1.63 s, BTCV Dice 0.84463 for both. With `--body_crop`: 0.8447 (difference vs no crop +0.0001, 90% CI −0.0009 to 0.0011).
 
 Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
 
