@@ -57,7 +57,9 @@ def main():
     started = datetime.now().astimezone().isoformat(timespec="seconds")
     T = time.perf_counter
     t = T()
-    preds = ti.build_predictors(cfg, Path(a.weights), dev, ti._step_size_for(task, cfg))
+    # tile step as in the reference TotalSegmentator (commit 8806051, nnunet.py): 0.8 for `total` and `total_mr`
+    # (FastSegmentator's _step_size_for still uses 0.5 for total_mr, an older rule)
+    preds = ti.build_predictors(cfg, Path(a.weights), dev, 0.8)
     trt_info = None
     if a.trt:
         import trt_int8

@@ -32,6 +32,8 @@ from nnunet_infer_nii import (  # noqa: E402
 # everything outside the box is written as background.
 BODY_CROP = False
 BODY_HU, BODY_MARGIN = -500.0, 10
+# Input resampling order. The reference TotalSegmentator (commit 8806051) uses linear (1); FastSegmentator used 3.
+RESAMPLE_ORDER = 1
 
 
 def _body_bbox(img_zyx):
@@ -48,6 +50,35 @@ def _body_bbox(img_zyx):
     lo = np.maximum(idx.min(0) * 2 - BODY_MARGIN, 0)
     hi = np.minimum(idx.max(0) * 2 + 2 + BODY_MARGIN, img_zyx.shape)
     return lo, hi
+def change_spacing_ref(img_in, new_spacing, target_shape=None, order=0, dtype=None, force_affine=None):
+    """= totalsegmentator.resampling.change_spacing on its CPU path (scipy.ndimage.zoom, mode="nearest"),
+    which is what the reference TotalSegmentator uses unless cucim is installed, but computed on the GPU with
+    cupyx.scipy.ndimage.zoom (same sampling grid, float64). TotalSegmentator's own GPU path (cucim
+    skimage.resize) uses a pixel-centre grid and gives different values whenever the spacing changes."""
+    import cupy as cp
+    from cupyx.scipy import ndimage as cnd
+    data = img_in.get_fdata()
+    old_shape = np.array(data.shape)
+    img_spacing = np.array(img_in.header.get_zooms())[:3]
+    new_spacing = np.array([new_spacing] * 3 if np.isscalar(new_spacing) else new_spacing, dtype=float)
+    if target_shape is not None:
+        zoom = np.array(target_shape) / old_shape
+        new_spacing = img_spacing / zoom
+    else:
+        zoom = img_spacing / new_spacing
+    if np.array_equal(img_spacing, new_spacing):
+        return img_in
+    new_affine = np.copy(img_in.affine)
+    for k in range(3):
+        new_affine[:3, k] = new_affine[:3, k] / zoom[k]
+    new_data = cnd.zoom(cp.asarray(data, dtype=cp.float64), zoom, mode="nearest", order=order).get()
+    if dtype is not None:
+        new_data = new_data.astype(dtype)
+    if force_affine is not None:
+        new_affine = force_affine
+    return nib.Nifti1Image(new_data, new_affine)
+
+
 from acvl_utils.cropping_and_padding.padding import pad_nd_image  # noqa: E402
 from nnunetv2.inference.sliding_window_prediction import compute_gaussian  # noqa: E402
 
@@ -58,7 +89,7 @@ def prepare_case(file_path, cfg):
     img_orig = nib.load(file_path)
     img_can = nib.as_closest_canonical(img_orig)
     if cfg.resample is not None:
-        img_rsp = ti.tseg_change_spacing(img_can, list(cfg.resample), order=3, dtype=np.int32, use_gpu=True)
+        img_rsp = change_spacing_ref(img_can, list(cfg.resample), order=RESAMPLE_ORDER, dtype=np.int32)
         arr_xyz = img_rsp.get_fdata().astype(np.float32)
         spacing_zyx = [float(cfg.resample[2]), float(cfg.resample[1]), float(cfg.resample[0])]
     else:
@@ -87,8 +118,8 @@ def finish_case(c, cfg, task_name):
     seg_nib = nib.Nifti1Image(c['seg'].transpose(2, 1, 0).astype(np.uint8), c['img_rsp'].affine)
     seg_nib = ti.remove_auxiliary_labels(seg_nib, task_name)
     if cfg.resample is not None:
-        seg_nib = ti.tseg_change_spacing(seg_nib, list(cfg.resample), c['img_can_shape'], order=0,
-                                         force_affine=c['img_can'].affine, use_gpu=True)
+        seg_nib = change_spacing_ref(seg_nib, list(cfg.resample), c['img_can_shape'], order=0,
+                                     force_affine=c['img_can'].affine)
     return ti.tseg_undo_canonical(seg_nib, c['img_orig'])
 
 
