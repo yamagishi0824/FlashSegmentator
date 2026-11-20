@@ -71,3 +71,4 @@ trt_engines/
 __pycache__/
 accel/
 cufile.log
+report/

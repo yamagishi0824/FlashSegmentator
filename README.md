@@ -130,7 +130,7 @@ fastsegmentator/   upstream FastSegmentator inference code (totalseg_infer.py, n
 src/               vendored nnunetv2 (upstream)
 benchmarks/        benchmark, profiling and evaluation scripts (bench2.py, eval_gt.py, probes, TensorRT/fused trials)
 docs/              PERF_LOG.md (every experiment) and the upstream FastSegmentator docs
-tests/, report/    upstream
+tests/             upstream
 ```
 
 ## Usage
