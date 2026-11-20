@@ -8,7 +8,7 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 
 - Same pretrained TotalSegmentator weights, same network, same sliding-window settings
   (patch 128³, step 0.8, Gaussian weighting, no mirroring, fp16 autocast) — **no retraining**.
-- Same accuracy: Dice vs ground truth matches official TotalSegmentator to within ±0.00002 (fp16 summation-order noise;
+- Same accuracy (default settings): Dice vs ground truth matches official TotalSegmentator to within ±0.00002 (fp16 summation-order noise;
   all Dice values in this README are given to 5 decimals).
 - Faster when processing many CTs: on GH200, **~3.4× FastSegmentator** (3.2× FastSegmentator with its `nnUNet_compile=1`)
   and **~58× the official TotalSegmentator CLI**.
@@ -16,7 +16,9 @@ fast re-implementation of the inference path of **[TotalSegmentator](https://git
 > Status: research code, work in progress. Only `total` (CT) and `total_mr` (MRI, `--mri`) are covered. The original FastSegmentator README
 > (all other tasks/modes, parity tables) is kept in [`docs/fastsegmentator/README_FastSegmentator.md`](docs/fastsegmentator/README_FastSegmentator.md).
 
-## Results (TotalSegmentator v2.0.1 test split, 73 CTs, NVIDIA GH200)
+## Results (CT)
+
+TotalSegmentator v2.0.1 test split, 73 CTs, NVIDIA GH200:
 
 | | per CT (mean, batch run) | throughput | speed vs TotalSegmentator | Dice vs GT (case mean) |
 |---|---|---|---|---|
@@ -46,9 +48,9 @@ Timings exclude model load (~3.5 s) and the one-off `torch.compile` warm-up (~15
 in the log. Note that the official-CLI number also includes per-call start-up and model loading, so it measures
 "TotalSegmentator as normally used", not raw network speed.
 
-## Concurrent processes on one GPU (512 TotalSegmentator v2.0.1 training-split CTs)
+## Concurrent processes on one GPU
 
-Best configuration of each implementation (number of concurrent processes on one GPU in parentheses).
+512 TotalSegmentator v2.0.1 training-split CTs. Best configuration of each implementation (number of concurrent processes on one GPU in parentheses).
 Throughput = 512 CTs / time of the longest-running process; a configuration in which any process ran out of GPU memory was not counted.
 
 | | GH200 | A100 80GB PCIe |
@@ -62,7 +64,9 @@ FlashSegmentator is fastest with a single process: it already overlaps CPU pre/p
 extra processes only compete for GPU memory. For more throughput, run one process per GPU rather than several per GPU.
 ¹ On the GH200 node, 16 or more concurrent official CLI calls failed because of multiprocessing limits.
 
-## MRI (`--mri`, TotalSegmentator MRI v2.0.0 test split, 55 MRIs, NVIDIA A100 80GB PCIe)
+## Results (MRI, `--mri`)
+
+TotalSegmentator MRI v2.0.0 test split, 55 MRIs, NVIDIA A100 80GB PCIe:
 
 | | per MRI (mean, batch run) | throughput | speed vs TotalSegmentator | Dice vs GT (case mean, 49 MRIs) |
 |---|---|---|---|---|
@@ -121,6 +125,7 @@ checkout as a sibling, weights via `fastsegmentator/download_totalseg_weights.py
 
 ```bash
 python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 8     # large GPU (H100/GH200)
+python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 4     # A100 80GB
 python flashseg/cli.py -i /path/to/ct_folder -o /path/to/out --batch 2     # smaller GPU
 python flashseg/cli.py -i ct.nii.gz -o out --no_compile                    # skip torch.compile warm-up
 python flashseg/cli.py -i /path/to/mri_folder -o /path/to/out --mri        # MRI: TotalSegmentator `total_mr` (50 structures)
