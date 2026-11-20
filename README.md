@@ -197,4 +197,4 @@ Benchmark / evaluation scripts: `benchmarks/bench2.py` (throughput, latency, mem
 - **nnU-Net** — Isensee F. et al., *nnU-Net: a self-configuring method for deep learning-based biomedical image
   segmentation*, Nature Methods, 2021.
 
-Licensed under Apache-2.0 (see `LICENSE`), same as FastSegmentator.
+Licensed under Apache-2.0 (see `LICENSE`), same as FastSegmentator. Copyright 2026 Yosuke Yamagishi for the modifications; see `NOTICE` for attribution of the upstream code.

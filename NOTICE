@@ -1,0 +1,12 @@
+FlashSegmentator
+Copyright 2026 Yosuke Yamagishi
+
+This product is a fork of FastSegmentator (https://github.com/bowang-lab/FastSegmentator),
+licensed under the Apache License, Version 2.0. Copyright of the original FastSegmentator code
+remains with its authors (bowang-lab). Modifications and additions in this repository
+(flashseg/, benchmarks/, docs/PERF_LOG.md and related changes) are Copyright 2026 Yosuke Yamagishi.
+
+It also includes a vendored copy of nnU-Net v2 (src/; https://github.com/MIC-DKFZ/nnUNet,
+Apache License 2.0, Copyright Division of Medical Image Computing, German Cancer Research Center (DKFZ), Heidelberg, Germany) and relies on
+TotalSegmentator (https://github.com/wasserth/TotalSegmentator). The pretrained TotalSegmentator
+weights are not distributed here and are subject to their own license terms.
