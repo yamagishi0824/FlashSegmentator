@@ -46,6 +46,22 @@ Timings exclude model load (~3.5 s) and the one-off `torch.compile` warm-up (~15
 in the log. Note that the official-CLI number also includes per-call start-up and model loading, so it measures
 "TotalSegmentator as normally used", not raw network speed.
 
+## Concurrent processes on one GPU (512 TotalSegmentator v2.0.1 training-split CTs)
+
+Best configuration of each implementation (number of concurrent processes on one GPU in parentheses).
+Throughput = 512 CTs / time of the longest-running process; a configuration in which any process ran out of GPU memory was not counted.
+
+| | GH200 | A100 80GB PCIe |
+|---|---|---|
+| TotalSegmentator (official CLI, `xargs -P N`) | not evaluated¹ | 482 CT/h (32) |
+| FastSegmentator + `nnUNet_compile=1` | 3079 CT/h (4) | 1707 CT/h (4) |
+| **FlashSegmentator** (GH200 batch 8, A100 batch 4) | **4707 CT/h (1)** | **2263 CT/h (1)** |
+| FlashSegmentator `--body_crop` | 6023 CT/h (1) | 2931 CT/h (1) |
+
+FlashSegmentator is fastest with a single process: it already overlaps CPU pre/post-processing with GPU inference, and
+extra processes only compete for GPU memory. For more throughput, run one process per GPU rather than several per GPU.
+¹ On the GH200 node, 16 or more concurrent official CLI calls failed because of multiprocessing limits.
+
 ## MRI (`--mri`, TotalSegmentator MRI v2.0.0 test split, 55 MRIs, NVIDIA A100 80GB PCIe)
 
 | | per MRI (mean, batch run) | throughput | speed vs TotalSegmentator | Dice vs GT (case mean, 49 MRIs) |
