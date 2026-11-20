@@ -33,7 +33,7 @@ TotalSegmentator v2.0.1 test split, 73 CTs, NVIDIA GH200:
 External check, BTCV (30 CTs, 13 abdominal labels mapped from TS labels): FastSegmentator 975 CT/h → FlashSegmentator
 3333 CT/h (batch 8; 3.42×), single-CT latency 3.57 s → 1.63 s, BTCV Dice 0.84463 for both. With `--body_crop`: 0.8447 (difference vs no crop +0.0001, 90% CI −0.0009 to 0.0011).
 
-Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
+Smaller GPU — NVIDIA T4 16 GB, (a) Kaggle, BTCV 12 CTs:
 
 | | per CT (mean, batch run) | throughput | speed vs TotalSegmentator | BTCV Dice |
 |---|---|---|---|---|
@@ -44,6 +44,19 @@ Smaller GPU — NVIDIA T4 16 GB (Kaggle), BTCV 12 CTs:
 
 On a slow GPU the network itself dominates, so the gain over FastSegmentator is smaller (1.46×; 1.26× over FastSegmentator with `nnUNet_compile=1`) and larger batches
 do not help (use `--batch 2`).
+
+(b) Azure NC4as_T4_v3, TotalSegmentator v2.0.1 test split, 73 CTs:
+
+| | per CT (mean, batch run) | throughput | speed vs TotalSegmentator |
+|---|---|---|---|
+| TotalSegmentator (official CLI, one call per CT) | 84.8 s | 42.5 CT/h | 1.0× |
+| FastSegmentator (upstream) | 18.0 s | 200 CT/h | 4.7× |
+| FastSegmentator + its `nnUNet_compile=1` | 16.3 s | 221 CT/h | 5.2× |
+| **FlashSegmentator** (batch 4) | **13.3 s** | **270 CT/h** | **6.4×** |
+| FlashSegmentator (batch 2) `--body_crop` | 9.95 s | 362 CT/h | 8.5× |
+
+FlashSegmentator (default) is equivalent to the official CLI on this GPU (TOST, ±0.01 Dice; all 117 structures).
+
 Timings exclude model load (~3.5 s) and the one-off `torch.compile` warm-up (~15–30 s), which are reported separately
 in the log. Note that the official-CLI number also includes per-call start-up and model loading, so it measures
 "TotalSegmentator as normally used", not raw network speed.
