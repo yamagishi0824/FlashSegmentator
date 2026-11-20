@@ -2,6 +2,8 @@
 
 **High-throughput TotalSegmentator inference without retraining**
 
+![Processing flow of TotalSegmentator, FastSegmentator and FlashSegmentator](docs/img/flow.png)
+
 Throughput-oriented inference for the **TotalSegmentator `total` task** (CT, 117 structures, 5 part-models)
 and the **`total_mr` task** (MRI, 50 structures, 2 part-models; `--mri`),
 built on top of **[FastSegmentator](https://github.com/bowang-lab/FastSegmentator)** (bowang-lab), which is itself a
